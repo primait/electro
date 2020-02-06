@@ -7,20 +7,10 @@ L'unico **electro** senza Electron
 ### Clone repository
 
 ```
-git clone https://github.com/primait/electro.git ~/.electro
+git clone git@github.com:primait/electro.git ~/.electro
 ```
 
-### Add to your profile file
-
-* Bash
+### Add to your $PATH
 
 ```
-echo -e '\n. $HOME/.electro/electro.sh >> ~/.bash_profile
-```
-
-* Zsh
-
-```
-echo -e '\n. $HOME/.electro/electro.sh >> ~/.zshrc
-```
-
+`$HOME/.electro/`
