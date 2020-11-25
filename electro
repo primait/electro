@@ -1,6 +1,8 @@
-#!/usr/bin/env bash
+#!/bin/bash
 set -euo pipefail
 IFS=$'\n\t'
+
+# TODO: watch list: visualizza lo stato di fswatch
 
 # configuration variables, read from config file
 ELECTRO_INSTANCE_ID="i-xxx"
@@ -11,9 +13,9 @@ REMOTE_PATH="/home/ubuntu"
 REMINDER_TIME="1750"
 
 readonly ping_vpn="10.254.0.250"
-readonly config_path=~/.config/electro
+readonly config_path=~/.config/electro/
 readonly config_file="config"
-readonly git_path="https://github.com/primait/electro.git"
+readonly script_url="https://raw.githubusercontent.com/aleinside/dotfiles/master/future/electro-future.sh"
 readonly log_path="/tmp/electro-log/"
 readonly rsync_options="--exclude=.git/ --exclude=vendor/ --exclude=node_modules/ --exclude=web/assets/ --exclude=web/compass/stylesheets/ --exclude=web/bundles/ --exclude=var/cache/ --exclude=var/logs/ --exclude=var/sessions/ --exclude=elm-stuff/ --exclude=_build/ --exclude=deps/ --exclude=web/js/ --exclude=dist/ --exclude=target/ --exclude=target-docker/ --exclude=public/assets/ --exclude=public/compass/stylesheets/ --exclude=public/bundles/ --exclude=public/js/ "
 readonly bold=$(tput bold)
@@ -125,6 +127,7 @@ start_services() {
     e_success "Istanza pronta"
 
     ip_key="PRIVATEIPADDRESS"
+    #ip_key="ASSOCIATION"
     instance_ip=$(aws ec2 describe-instances --instance-ids ${ELECTRO_INSTANCE_ID} --output text |grep ${ip_key} |head -1 |awk '{print $4}')
 
     e_success "Ottenuto IP ${instance_ip}"
@@ -174,6 +177,8 @@ stop_services() {
 
 check() {
     local instance_status
+    local fswatch_pid
+    local pid_file
     check_vpn
     instance_status=$(eval "${instance_describe_status_cmd}")
     if [[ "${instance_status}" != "running" ]]; then
@@ -181,23 +186,13 @@ check() {
     else
         e_success "Stato dell'istanza: ok"
     fi
-    check_watch "$1"
-}
-
-check_watch() {
-    local pid_file
-    local fswatch_pid
     set +e
-    pid_file="${log_path}$1.pid"
+    pid_file="${log_path}$(get_project).pid"
     fswatch_pid=$(cat "${pid_file}" 2> /dev/null)
     if ps -p "${fswatch_pid}" &> /dev/null; then
         e_success "fswatch è attivo"
-	# controllo tra 5 minuti
-        sleep 300
-        check_watch "$1" &
     else
         e_error "fswatch non è attivo"
-	exit 1
     fi
     set -e
 }
@@ -209,7 +204,6 @@ killall_fswatch() {
     if pgrep fswatch > /dev/null; then
         kill $(pgrep fswatch |awk '{print $1}')
     fi
-    # TODO: ricordarsi killare anche gli fswatch
     set -e
 }
 
@@ -217,21 +211,19 @@ watch() {
     local logfile
     local pidfile
     local pid
-    local project
-    project=get_project
-    logfile="${log_path}$(project).log"
-    pidfile="${log_path}$(project).pid"
+    logfile="${log_path}$(get_project).log"
+    pidfile="${log_path}$(get_project).pid"
     e_warning "Inizializzo fswatch: log su ${logfile}"
 
     if eval "${fswatch_cmd} &" ; then
+        #pid=$!
         pid=$(jobs -p)
         e_warning "PID: ${pid}"
         touch "${pidfile}"
         echo "${pid}" > "${pidfile}"
-	check_watch $(project)
+        e_success "Fswatch lanciato"
     else
         e_error "Problemi con fswatch"
-	exit 1
     fi
 }
 
@@ -249,8 +241,20 @@ logwatch() {
 }
 
 update() {
+    local scriptpath
+    local scriptname
+    local random_string
+    scriptpath=$( cd "$(dirname "$0")" ; pwd -P )
+    scriptname=$(basename "$0")
     e_header "Procedo con l'aggiornamento dello script"
-    git -C ${git_path} pull
+    e_arrow "Salvo in ${scriptpath}/${scriptname}"
+    random_string=$(date +"%s")
+    if curl -fsSL "${script_url}"?ran="${random_string}" -o "${scriptpath}/${scriptname}"; then
+        e_success "Aggiornamento riuscito!"
+    else
+        e_error "Problemi nell'aggiornamento"
+    fi
+    # TODO: creare file rsync
 }
 
 usage() {
