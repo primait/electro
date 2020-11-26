@@ -6,15 +6,15 @@ IFS=$'\n\t'
 ELECTRO_INSTANCE_ID="i-xxx"
 HOST="prima"
 SSH_HOST="dev-prima"
+PING_VPN="10.254.0.250"
 AWS_PROFILE="default"
 # optional
 REMOTE_PATH="/home/ubuntu"
 REMINDER_TIME="1750"
 
-readonly ping_vpn_it="10.254.0.250"
-readonly ping_vpn_uk="10.253.1.250"
 readonly config_path=~/.config/electro/
 readonly config_file="config"
+readonly script_url="https://raw.githubusercontent.com/primait/electro/master/electro"
 readonly log_path="/tmp/electro-log/"
 readonly rsync_options="--exclude=.git/ --exclude=vendor/ --exclude=node_modules/ --exclude=web/assets/ --exclude=web/compass/stylesheets/ --exclude=web/bundles/ --exclude=var/cache/ --exclude=var/logs/ --exclude=var/sessions/ --exclude=elm-stuff/ --exclude=_build/ --exclude=deps/ --exclude=web/js/ --exclude=dist/ --exclude=target/ --exclude=target-docker/ --exclude=public/assets/ --exclude=public/compass/stylesheets/ --exclude=public/bundles/ --exclude=public/js/ "
 readonly bold=$(tput bold)
@@ -65,20 +65,9 @@ notification_for_mac() {
     fi
 }
 
-define_vpn_country() {
-    set +e
-    if pkgutil --pkgs |grep "com.wireguard.macos"; then
-        ping_vpn=$ping_vpn_uk
-    else
-        ping_vpn=$ping_vpn_it
-    fi
-    set -e
-}
-
 check_vpn() {
     set +e
-    eval "${define_vpn_country}"
-    if ! ping -c2 -q "${ping_vpn}" > /dev/null; then
+    if ! ping -c2 -q "${PING_VPN}" > /dev/null; then
         e_warning "You have not activated the VPN!"
         exit
     fi
@@ -249,6 +238,22 @@ logwatch() {
     tail -f "${logfile}"
 }
 
+update() {
+    local scriptpath
+    local scriptname
+    local random_string
+    scriptpath=$( cd "$(dirname "$0")" ; pwd -P )
+    scriptname=$(basename "$0")
+    e_header "Starting the script update"
+    e_arrow "Saving in ${scriptpath}/${scriptname}"
+    random_string=$(date +"%s")
+    if curl -fsSL "${script_url}"?ran="${random_string}" -o "${scriptpath}/${scriptname}"; then
+        e_success "Update succeeded!"
+    else
+        e_error "Issues with update"
+    fi
+}
+
 usage() {
     e_header "electro usage:"
     e_arrow "start:       start the instance. with --nowatch flag doesn't start watch"
@@ -257,6 +262,7 @@ usage() {
     e_arrow "watch:       start fswatch"
     e_arrow "stopwatch:   kill fswatch"
     e_arrow "log:         check fswatch log"
+    e_arrow "update:      update this script"
     e_arrow "dc <cmd>:    run 'docker-compose <cmd>' on the remote instance"
     e_arrow "test-notification:   test notification at ${REMINDER_TIME}"
     printf "\\n"
@@ -281,6 +287,7 @@ main() {
         echo 'ELECTRO_INSTANCE_ID="i-xxx"
 HOST="prima"
 SSH_HOST="dev-prima"
+PING_VPN=""
 AWS_PROFILE="default"
 ' > ${config_path}${config_file}
 
@@ -317,6 +324,8 @@ AWS_PROFILE="default"
         logwatch
     elif [[ $cmd == "test-notification" ]]; then
         notify "Test notification" &
+    elif [[ $cmd == "update" ]]; then
+        update
     elif [[ $cmd == "dc" ]]; then
         doc_exec "$@"
     else
