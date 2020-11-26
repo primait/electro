@@ -68,16 +68,16 @@ notification_for_mac() {
 define_vpn_country() {
     set +e
     if pkgutil --pkgs |grep "com.wireguard.macos"; then
-        ping_vpn=ping_vpn_uk
+        ping_vpn=$ping_vpn_uk
     else
-        ping_vpn=ping_vpn_it
+        ping_vpn=$ping_vpn_it
     fi
     set -e
 }
 
 check_vpn() {
     set +e
-    eval "${define_country}"
+    eval "${define_vpn_country}"
     if ! ping -c2 -q "${ping_vpn}" > /dev/null; then
         e_warning "You have not activated the VPN!"
         exit
