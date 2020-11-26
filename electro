@@ -5,7 +5,6 @@ IFS=$'\n\t'
 # configuration variables, read from config file
 ELECTRO_INSTANCE_ID="i-xxx"
 HOST="prima"
-SSH_HOST="dev-prima"
 PING_VPN="10.254.0.250"
 AWS_PROFILE="default"
 # optional
@@ -135,7 +134,7 @@ start_services() {
     cat /tmp/hostsBK | sudo tee /etc/hosts 1> /dev/null
     rm /tmp/hostsBK
     #sed "/HostName/ s/.*/HostName ${INSTANCE_IP}/g" ~/.ssh/config > /tmp/sshconfig
-    oldip=$(grep -w ${SSH_HOST} -A 1 ~/.ssh/config | awk '/HostName/ {print $2}')
+    oldip=$(grep -w ${HOST} -A 1 ~/.ssh/config | awk '/HostName/ {print $2}')
     sed "s/${oldip}/${instance_ip}/g" ~/.ssh/config > /tmp/sshconfig
     cat /tmp/sshconfig > ~/.ssh/config
     rm /tmp/sshconfig
@@ -145,7 +144,7 @@ start_services() {
     fi
 
     e_success "Now you can launch electro watch in your project folders"
-    e_success "Remember: you can connect via ssh ${SSH_HOST}"
+    e_success "Remember: you can connect to the remote instance: ssh ${HOST}"
 
     notification_for_mac "Remember to switch off the remote instance!" &
 }
@@ -273,7 +272,7 @@ usage() {
 doc_exec() {
     local parameters
     parameters="${@:2}"
-    ssh "${SSH_HOST}" "cd ${REMOTE_PATH}/$(get_project);docker-compose ${parameters}"
+    ssh "${HOST}" "cd ${REMOTE_PATH}/$(get_project);docker-compose ${parameters}"
 }
 
 main() {
@@ -286,7 +285,6 @@ main() {
         touch ${config_path}${config_file}
         echo 'ELECTRO_INSTANCE_ID="i-xxx"
 HOST="prima"
-SSH_HOST="dev-prima"
 PING_VPN=""
 AWS_PROFILE="default"
 ' > ${config_path}${config_file}
@@ -308,7 +306,7 @@ AWS_PROFILE="default"
 
     logfile="${log_path}$(get_project).log"
     instance_status_cmd="aws ec2 describe-instance-status --instance-ids ${ELECTRO_INSTANCE_ID} --profile=${AWS_PROFILE} --output text |grep SYSTEMSTATUS | awk '{print \$2}'"
-    fswatch_cmd="fswatch -o $(pwd) | xargs -n1 -I{} rsync -aruzvq --delete --log-file=${logfile} ${rsync_options} $(pwd) ${SSH_HOST}:${REMOTE_PATH}"
+    fswatch_cmd="fswatch -o $(pwd) | xargs -n1 -I{} rsync -aruzvq --delete --log-file=${logfile} ${rsync_options} $(pwd) ${HOST}:${REMOTE_PATH}"
     instance_describe_status_cmd="aws ec2 describe-instances --instance-ids ${ELECTRO_INSTANCE_ID} --profile=${AWS_PROFILE} --output text |grep -w STATE |awk '{print \$3}'"
     if [[ $cmd == "start" ]]; then
         start_services "$@"
