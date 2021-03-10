@@ -17,7 +17,8 @@ readonly script_url="https://raw.githubusercontent.com/primait/electro/master/el
 readonly log_path="/tmp/electro-log/"
 
 readonly ELECTRO_IGNORE="${PWD}/.electroignore"
-rsync_options=""
+
+rsync_options="--exclude=.ssh/"
 
 
 test_electroignore() {
@@ -36,9 +37,13 @@ test_electroignore() {
 
 create_default_electroignore() {
   e_warning "Writing default ${ELECTRO_IGNORE}"
-  printf "# Lines starting with dash will be ignored.\n >" $ELECTRO_IGNORE
-  printf "# This template is based on originally ignored folders. Feel free to clean\n" >> $ELECTRO_IGNORE
+  printf "# Lines starting with dash will be ignored.\n" > $ELECTRO_IGNORE
   printf ".git/\n" >> $ELECTRO_IGNORE
+  printf ".ssh/\n" >> $ELECTRO_IGNORE
+  printf ".idea/\n" >> $ELECTRO_IGNORE
+  printf ".vscode/\n" >> $ELECTRO_IGNORE
+  printf ".electroignore\n" >> $ELECTRO_IGNORE
+  printf "# This template is based on originally ignored folders. Feel free to clean\n" >> $ELECTRO_IGNORE
   printf "vendor/\n" >> $ELECTRO_IGNORE
   printf "node_modules/\n" >> $ELECTRO_IGNORE
   printf "web/assets/\n" >> $ELECTRO_IGNORE
@@ -339,7 +344,7 @@ doc_exec() {
 build_rsync_options() {
   test_electroignore
   while read line; do
-    if ! [[ $line == \#* ]]; then
+    if ! [[ $line == \#* ]] && [ -n "${line##+([[:space:]])}" ] ; then
       rsync_options="${rsync_options} --exclude=${line}"
     fi
 
