@@ -18,7 +18,7 @@ readonly log_path="/tmp/electro-log/"
 
 readonly ELECTRO_IGNORE="${PWD}/.electroignore"
 
-rsync_options="--exclude=.ssh/"
+rsync_options=""
 
 
 test_electroignore() {
@@ -37,13 +37,13 @@ test_electroignore() {
 
 create_default_electroignore() {
   e_warning "Writing default ${ELECTRO_IGNORE}"
-  printf "# Lines starting with dash will be ignored.\n" > $ELECTRO_IGNORE
+  printf "# Common files and folders to exclude from sync \n" > $ELECTRO_IGNORE
   printf ".git/\n" >> $ELECTRO_IGNORE
   printf ".ssh/\n" >> $ELECTRO_IGNORE
   printf ".idea/\n" >> $ELECTRO_IGNORE
   printf ".vscode/\n" >> $ELECTRO_IGNORE
   printf ".electroignore\n" >> $ELECTRO_IGNORE
-  printf "# This template is based on originally ignored folders. Feel free to clean\n" >> $ELECTRO_IGNORE
+  printf "\n# Project specific files and folders to exclude from sync \n" >> $ELECTRO_IGNORE
   printf "vendor/\n" >> $ELECTRO_IGNORE
   printf "node_modules/\n" >> $ELECTRO_IGNORE
   printf "web/assets/\n" >> $ELECTRO_IGNORE
@@ -141,6 +141,7 @@ check_aws_sso() {
   set -e
   if [ $retVal -ne 0 ]; then
      aws sso login
+     sleep 2
   fi
 }
 
