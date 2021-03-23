@@ -43,6 +43,7 @@ create_default_electroignore() {
   printf ".idea/\n" >> $ELECTRO_IGNORE
   printf ".vscode/\n" >> $ELECTRO_IGNORE
   printf ".electroignore\n" >> $ELECTRO_IGNORE
+  printf ".DS_Store\n" >> $ELECTRO_IGNORE
   printf "\n# Project specific files and folders to exclude from sync \n" >> $ELECTRO_IGNORE
   printf "vendor/\n" >> $ELECTRO_IGNORE
   printf "node_modules/\n" >> $ELECTRO_IGNORE
