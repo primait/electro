@@ -15,7 +15,58 @@ readonly config_path=~/.config/electro/
 readonly config_file="config"
 readonly script_url="https://raw.githubusercontent.com/primait/electro/master/electro"
 readonly log_path="/tmp/electro-log/"
-readonly rsync_options="--exclude=.git/ --exclude=vendor/ --exclude=node_modules/ --exclude=web/assets/ --exclude=web/compass/stylesheets/ --exclude=web/bundles/ --exclude=var/cache/ --exclude=var/logs/ --exclude=var/sessions/ --exclude=elm-stuff/ --exclude=_build/ --exclude=deps/ --exclude=web/js/ --exclude=dist/ --exclude=target/ --exclude=target-docker/ --exclude=public/assets/ --exclude=public/compass/stylesheets/ --exclude=public/bundles/ --exclude=public/js/ "
+
+readonly ELECTRO_IGNORE="${PWD}/.electroignore"
+
+rsync_options=""
+
+
+test_electroignore() {
+  if ! test -f "$ELECTRO_IGNORE"; then
+      e_warning "File .electroignore not found in current path: $PWD"
+      echo "Would you like to create one (type 1 for Yes, 2 for No)?"
+
+      select yn in "Yes" "No"; do
+        case $yn in
+          Yes ) create_default_electroignore; break ;;
+          No ) e_error "Can't proceed further without a .electroignore file in project path :("; exit;;
+        esac
+      done
+  fi
+}
+
+create_default_electroignore() {
+  e_warning "Writing default ${ELECTRO_IGNORE}"
+  printf "# Common files and folders to exclude from sync \n" > $ELECTRO_IGNORE
+  printf ".git/\n" >> $ELECTRO_IGNORE
+  printf ".ssh/\n" >> $ELECTRO_IGNORE
+  printf ".idea/\n" >> $ELECTRO_IGNORE
+  printf ".vscode/\n" >> $ELECTRO_IGNORE
+  printf ".electroignore\n" >> $ELECTRO_IGNORE
+  printf ".DS_Store\n" >> $ELECTRO_IGNORE
+  printf "\n# Project specific files and folders to exclude from sync \n" >> $ELECTRO_IGNORE
+  printf "vendor/\n" >> $ELECTRO_IGNORE
+  printf "node_modules/\n" >> $ELECTRO_IGNORE
+  printf "web/assets/\n" >> $ELECTRO_IGNORE
+  printf "web/compass/stylesheets/\n" >> $ELECTRO_IGNORE
+  printf "web/bundles/\n" >> $ELECTRO_IGNORE
+  printf "var/cache/\n" >> $ELECTRO_IGNORE
+  printf "var/logs/\n" >> $ELECTRO_IGNORE
+  printf "var/sessions/\n" >> $ELECTRO_IGNORE
+  printf "elm-stuff/\n" >> $ELECTRO_IGNORE
+  printf "_build/\n" >> $ELECTRO_IGNORE
+  printf "deps/\n" >> $ELECTRO_IGNORE
+  printf "web/js/\n" >> $ELECTRO_IGNORE
+  printf "dist/\n" >> $ELECTRO_IGNORE
+  printf "target/\n" >> $ELECTRO_IGNORE
+  printf "target-docker/\n" >> $ELECTRO_IGNORE
+  printf "public/assets/\n" >> $ELECTRO_IGNORE
+  printf "public/compass/stylesheets/\n" >> $ELECTRO_IGNORE
+  printf "public/bundles/\n" >> $ELECTRO_IGNORE
+  printf "public/js/\n" >> $ELECTRO_IGNORE
+}
+
+
 readonly bold=$(tput bold)
 readonly reset=$(tput sgr0)
 readonly purple=$(tput setaf 171)
@@ -85,6 +136,16 @@ kill_fswatch() {
     set -e
 }
 
+check_aws_sso() {
+  set +e
+  aws sts get-caller-identity; retVal=$?
+  set -e
+  if [ $retVal -ne 0 ]; then
+     aws sso login
+     sleep 2
+  fi
+}
+
 start_services() {
     local check_os
     local instance_status
@@ -92,6 +153,10 @@ start_services() {
     local ip_key
     local instance_ip
     local k
+
+    e_header "Verifying AWS SSO Login"
+
+    check_aws_sso
 
     e_header "Starting instance: ${ELECTRO_INSTANCE_ID}"
 
@@ -192,6 +257,7 @@ check() {
         e_error "fswatch is not running"
     fi
     set -e
+
 }
 
 killall_fswatch() {
@@ -265,6 +331,8 @@ usage() {
     e_arrow "dc <cmd>:    run 'docker-compose <cmd>' on the remote instance"
     e_arrow "test-notification:   test notification at ${REMINDER_TIME}"
     printf "\\n"
+    e_warning "Excluded paths:   ${rsync_options}"
+    printf "\\n"
     e_warning "Remember to execute the commands in the project folder you want to work on!"
     printf "\\n"
 }
@@ -275,7 +343,18 @@ doc_exec() {
     ssh "${HOST}" "cd ${REMOTE_PATH}/$(get_project);docker-compose ${parameters}"
 }
 
+build_rsync_options() {
+  test_electroignore
+  while read line; do
+    if ! [[ $line == \#* ]] && [ -n "${line##+([[:space:]])}" ] ; then
+      rsync_options="${rsync_options} --exclude=${line}"
+    fi
+
+  done < $ELECTRO_IGNORE
+}
+
 main() {
+    build_rsync_options
     local cmd=${1:-}
     local logfile
 
