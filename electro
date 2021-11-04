@@ -164,7 +164,13 @@ start_services() {
 
     check_os=$(uname -s)
     if [[ ${check_os} == "Darwin" ]]; then
-        ssh-add -K ~/.ssh/id_rsa
+        # macOS Monterey deprecates the -K and -A flags. They have been replaced
+        # by the --apple-use-keychain and --apple-load-keychain flags.
+        if [[ $(sw_vers -buildVersion) > "21" ]]; then
+            ssh-add --apple-load-keychain
+        else 
+            ssh-add -K ~/.ssh/id_rsa
+        fi
     else
         ssh-add ~/.ssh/id_rsa
     fi
