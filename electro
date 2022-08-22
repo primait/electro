@@ -195,7 +195,7 @@ start_services() {
     e_success "Found IP ${instance_ip}"
     e_warning "Updating ~/.ssh/config and /etc/hosts"
 
-    sed "/${HOST}/ s/.*/${instance_ip}	${HOST}/g" /etc/hosts > /tmp/hostsBK
+    awk '{if (/(.*)${HOST}/) {$0="${instance_ip}     " $2}; print}' /etc/hosts > /tmp/hostsBK
     cat /tmp/hostsBK | sudo tee /etc/hosts 1> /dev/null
     rm /tmp/hostsBK
     #sed "/HostName/ s/.*/HostName ${INSTANCE_IP}/g" ~/.ssh/config > /tmp/sshconfig
