@@ -6,7 +6,6 @@ IFS=$'\n\t'
 ELECTRO_INSTANCE_ID="i-xxx"
 HOST="prima"
 PING_VPN="10.254.0.250"
-AWS_PROFILE="default"
 # optional
 REMOTE_PATH="/home/ubuntu"
 REMINDER_TIME="1750"
@@ -138,10 +137,10 @@ kill_fswatch() {
 
 check_aws_sso() {
   set +e
-  aws sts get-caller-identity; retVal=$?
+  aws sts get-caller-identity --profile=${AWS_PROFILE}; retVal=$?
   set -e
   if [ $retVal -ne 0 ]; then
-     aws sso login
+     aws sso login --profile=${AWS_PROFILE}
      sleep 2
   fi
 }
@@ -164,7 +163,13 @@ start_services() {
 
     check_os=$(uname -s)
     if [[ ${check_os} == "Darwin" ]]; then
-        ssh-add -K ~/.ssh/id_rsa
+        # macOS Monterey deprecates the -K and -A flags. They have been replaced
+        # by the --apple-use-keychain and --apple-load-keychain flags.
+        if [[ $(sw_vers -buildVersion) > "21" ]]; then
+            ssh-add --apple-load-keychain
+        else
+            ssh-add -K ~/.ssh/id_rsa
+        fi
     else
         ssh-add ~/.ssh/id_rsa
     fi
