@@ -162,6 +162,7 @@ start_services() {
 
     check_vpn
 
+    eval "$(ssh-agent)"
     check_os=$(uname -s)
     if [[ ${check_os} == "Darwin" ]]; then
         ssh-add -K ~/.ssh/id_rsa
