@@ -117,7 +117,7 @@ notification_for_mac() {
 
 check_vpn() {
     set +e
-    if ! ping -c2 -q "${PING_VPN}" > /dev/null; then
+    if (! ping -c2 -t 2 -q ${PING_VPN} > /dev/null) && (! warp-cli status | grep Connected  > /dev/null); then
         e_warning "You have not activated the VPN!"
         exit
     fi
